@@ -1,0 +1,12 @@
+9. Video compression before streaming
+The original lossless FFV1 video is encoded as H.264 with CRF 28 and 4:2:0 chroma subsampling. FFmpeg performs spatial prediction, temporal prediction, transform quantization, and entropy coding. The faststart flag moves MP4 metadata to the beginning to support progressive playback. File sizes include container overhead. Compression ratio = original bytes / encoded bytes. All corresponding decoded frames, including every BGR channel, contribute to pooled MSE; PSNR = 10 log10(255^2/MSE). The same reference dimensions, frame count, and frame rate are checked. Compression may smooth fine details and introduce edge artifacts.
+
+10. Video streaming at different bitrates
+The reference is independently encoded using H.264 with 100, 300, and 800 kbit/s targets and a constant bitrate HRD setting. One-second GOPs enable one-second HLS MPEG-TS segments. A temporary HTTP server bound only to 127.0.0.1 serves the HLS playlists and segments. FFmpeg requests each playlist over HTTP and decodes the complete streamed video; the decoded pixels must equal the local MP4 decode. HTTP request logs and decoded frame images provide execution evidence. A progressive MP4 transfer is also checked byte-for-byte and its SHA-256 is recorded. The server stops automatically.
+
+Compare the measured MSE/PSNR, total bitrate, and first-middle-frame examples in metrics.json and comparison.png. Larger target bitrate generally preserves detail better, but monotonic improvement is not assumed: inspect the measured values. This is a real local HTTP/HLS demonstration, not an Internet network experiment. It does not measure congestion, buffering, jitter, latency, packet loss, or adaptive switching. Transfer/decode elapsed time is wall-clock processing time, not playback delay. HLS packaging increases overhead. Actual total bitrate includes container overhead and can differ from the encoder's target, especially for a short clip.
+
+Manual replay after the run:
+  python -m http.server 8000 --bind 127.0.0.1 --directory outputs/10_bitrate_streaming
+  ffplay http://127.0.0.1:8000/100kbps/stream.m3u8
+Replace 100kbps with 300kbps or 800kbps. Stop the server with Ctrl+C.
